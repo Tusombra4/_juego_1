@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Misu's maze </title>
+    <style>
+        .game-container {
+            display: grid;
+            grid-template-columns: repeat(10, 50px);
+            grid-gap: 2px;
+            background-color: violet; /* Cambiar el color de fondo a violeta */
+        }
+        #title-container {
+            position: absolute;
+            top: 5px; /* Cambia la posición vertical según sea necesario */
+            left: 50%; /* Coloca el título en el centro horizontal */
+            transform: translateX(-50%); /* Centra horizontalmente el título */
+            z-index: 1000; /* Asegura que el título esté sobre el laberinto */
+        }
+
+        /* Estilos CSS para el título */
+        #title {
+            font-size: 3rem;
+            color: white; /* Color del texto */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .wall {
+            background-color: #8B4513;
+            width: 50px;
+            height: 50px;
+            border-color: maroon; /* Cambiar el color de las líneas de las paredes a maroon */
+        }
+
+        .path,
+        .player,
+        .reward {
+            width: 50px;
+            height: 50px;
+        }
+
+        .player {
+            background-size: cover;
+            background-image: url('https://i.ibb.co/t3zsnkF/Whats-App-Image-2024-03-13-at-23-35-11.jpg');
+            /* Reemplaza con la URL de tu imagen */
+        }
+
+        .reward {
+            background-size: cover;
+            background-image: url('https://coalimentlasecuita.com/556/colacao-original.jpg');
+            /* Reemplaza con la URL de tu imagen */
+        }
+
+        body {
+            background: black;
+            color: white;
+            font-family: Arial;
+        }
+
+        #grid {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-width: 1000px;
+            min-height: 600px;
+            left: 20%;
+        }
+
+        .block {
+            border: 1px solid black;
+            position: absolute;
+            margin: 1px;
+            width: 50px;
+            height: 50px;
+            font-size: 8px;
+            display: block;
+            background: maroon;
+            color: white;
+            -webkit-transition: background-color 100ms linear;
+            -ms-transition: background-color 100ms linear;
+            transition: background-color 100ms linear;
+        }
+
+        .block.generated {
+            background: violet;
+        }
+
+
+        .block.generated.visited {
+            background: #eef;
+        }
+
+        .block.generated.visited.path {
+            background: #aaf;
+        }
+
+
+        .block.current.error {
+            background: #f00 !important;
+        }
+
+        .block.left {
+            border-left: 1px solid transparent;
+        }
+
+        .block.right {
+            border-right: 1px solid transparent;
+        }
+
+        .block.bottom {
+            border-bottom: 1px solid transparent;
+        }
+
+        .block.top {
+            border-top: 1px solid transparent;
+        }
+
+        /* Estilos para cada botón */
+        .button-container {
+            position: absolute;
+        }
+
+        .button-container button {
+            padding: 30px;
+            font-size: 36px;
+            position: absolute; /* Añadido para asegurar la posición absoluta de los botones */
+        }
+
+        /* Estilos para cada botón */
+        #btnTop {
+            top: 160px;
+            left: 750px;
+        }
+
+        #btnLeft {
+            top: 225px;
+            left: 635px;
+        }
+
+        #btnReset {
+            top: 50px;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #btnRight {
+            top: 225px;
+            left: 865px;
+        }
+
+        #btnBottom {
+            top: 290px;
+            left: 750px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="title-container">
+        <!-- Título del laberinto -->
+        <h1 id="title">Misu's maze 🦥🥰</h1>
+    </div>
+
+    <p>Usa las flechas para moverte</p>
+    <img src="https://static.vecteezy.com/system/resources/previews/019/022/496/non_2x/3d-icon-of-reload-free-png.png" style="width: 50px; height: 50px;" onclick="maze.reset();">
+    
+    
+    <div id="grid"></div>
+    <div class="button-container">
+        <img id="btnTop" src="https://cdn-icons-png.flaticon.com/512/8767/8767343.png" style="width: 125px; height: 125px; position: absolute;" onclick="movePlayer('top')" alt="Arriba">
+<img id="btnLeft" src="https://cdn-icons-png.flaticon.com/512/8767/8767343.png" style="width: 125px; height: 125px; transform: rotate(-90deg); position: absolute;" onclick="movePlayer('left')" alt="Izquierda">
+<img id="btnRight" src="https://cdn-icons-png.flaticon.com/512/8767/8767343.png" style="width: 125px; height: 125px; transform: rotate(90deg); position: absolute;" onclick="movePlayer('right')" alt="Derecha">
+<img id="btnBottom" src="https://cdn-icons-png.flaticon.com/512/8767/8767343.png" style="width: 125px; height: 125px; transform: rotate(180deg); position: absolute;" onclick="movePlayer('bottom')" alt="Abajo">
+
+
+    <script>
+
+        //  ------------------------------------------------INICIO SECCIÓN PARA MODIFICAR LOS TEXTOS-------------------------------------------------
+        const congratulationsMessage = 'Enhorabuena, aquí tienes tu pista 🎁'; //Modificar título de la pantalla de premio 
+        const prizeDescription = 'En Sasikoa su calle se adorna, Donde la diversión se desborda. Columpios y risas llenan el aire, Historias en bancos, sin cesar se comparten. ¿Qué lugar misterioso podría ser este? '; // Modifica la descripción de la pantalla de premio
+
+        //Modifica estos 2 textos tan largos por tu imagen en base64.
+        //Para convertir la imagen a base64 tienes que ir a una página como por ejemplo https://www.base64-image.de/ 
+        //Ahí subes tu imagen y cuando se complete aparecerá un botón 'Copy image'. 
+        //Pulsas sobre él y se te copiará el texto, sustituyes el que hay ahora por el tuyo en cada caso.
+
+
+        //Este texto de aqui representa la imagen que tendrá el jugador. Más abajo encontrarás el del premio.
+        //Sustituir lo que hay entre las comillas ''
+        const imagenDelJugadorBase64 = 'https://i.ibb.co/t3zsnkF/Whats-App-Image-2024-03-13-at-23-35-11.jpg'; //Sustituir lo que hay entre las comillas ''
+
+
+        //Este texto de aqui representa la imagen que tendrá el premio.
+        //Sustituir lo que hay entre las comillas ''
+        const imagenDelPremioBase64 = 'https://coalimentlasecuita.com/556/colacao-original.jpg'; 
+        ////Sustituir lo que hay entre las comillas ''
+
+//  ------------------------------------------------FIN SECCIÓN PARA MODIFICAR LOS TEXTOS-------------------------------------------------
+        // Función para crear y añadir el estilo
+        function createStyles() {
+            // Crear un elemento <style>
+            const style = document.createElement('style');
+            style.type = 'text/css';
+
+            // Definir las reglas CSS utilizando las variables
+            const cssRules = `
+        .block.generated.target {
+            background-image: url('${imagenDelPremioBase64}');
+            background-size: cover; /* Ajusta según necesites */
+        }
+        .block.current {
+            background-image: url('${imagenDelJugadorBase64}');
+            background-size: cover; /* Ajusta según necesites */
+        }
+    `;
+
+            // Añadir las reglas CSS al elemento <style>
+            if (style.styleSheet) {
+                // Soporte para IE
+                style.styleSheet.cssText = cssRules;
+            } else {
+                // Soporte para otros navegadores
+                style.appendChild(document.createTextNode(cssRules));
+            }
+
+            // Añadir el elemento <style> al <head> del documento
+            document.head.appendChild(style);
+        }
+
+        // Llamada a la función para crear y añadir el estilo
+        createStyles();
+
+        window.onload = function () {
+            window.maze = new Maze({
+                gridElement: document.getElementById('grid'),
+                gridSize: new Point(20, 15),
+                blockSize: 50,
+                onSolved: function () {
+                    showCongratulationsScreen();
+                }
+            });
+            maze.reset();
+        }
+
+        function whileAsync(cond, body, chunkSize, period) {
+            var chunkSize = chunkSize || 10;
+            var period = period || 0;
+            return new Promise(function (resolve, reject) {
+                var interval = setInterval(function () {
+                    for (var k = 0; k < chunkSize; k++) {
+                        if (!cond()) {
+                            clearInterval(interval);
+                            resolve();
+                            return;
+                        }
+                        body();
+                    }
+                }, period);
+            });
+        }
+
+        function addEphemeralClass(element, className, duration) {
+            var duration = duration || 1000;
+            element.classList.add(className);
+            setTimeout(function () {
+                element.classList.remove(className);
+            }, duration);
+        }
+
+        function Point(x, y) {
+            this.x = parseInt(x);
+            this.y = parseInt(y);
+        }
+
+        Point.prototype.equals = function (other) {
+            return other.x == this.x && other.y == this.y;
+        }
+
+        Point.prototype.serialize = function () {
+            return JSON.stringify([this.x, this.y]);
+        }
+
+        Point.prototype.insideBounds = function (bounds) {
+            return (
+                (this.x >= 0 && this.x < bounds.x) &&
+                (this.y >= 0 && this.y < bounds.y));
+        }
+
+        Point.prototype.offset = function (delta) {
+            return new Point(this.x + parseInt(delta[0]), this.y + parseInt(delta[1]));
+        }
+
+        function showCongratulationsScreen() {
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = 0;
+            overlay.style.left = 0;
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
+            overlay.style.color = 'white';
+            overlay.style.display = 'flex';
+            overlay.style.flexDirection = 'column';
+            overlay.style.justifyContent = 'center';
+            overlay.style.alignItems = 'center';
+            overlay.style.zIndex = '1000';
+            overlay.innerHTML = `
+        <h2>${congratulationsMessage}</h2>
+        <img src="${imagenDelPremioBase64}" alt="Premio" style="max-width: 80%; margin-bottom: 20px;">
+        <p>${prizeDescription}</p>
+    `;
+
+            // Crear el botón de cierre dentro de JavaScript para asegurar el acceso a `overlay`
+            const closeButton = document.createElement('button');
+            closeButton.textContent = 'Cerrar';
+            closeButton.style.padding = '10px';
+            closeButton.style.fontSize = '16px';
+            closeButton.style.cursor = 'pointer';
+            // Asignar evento onclick al botón para que elimine el overlay
+            closeButton.onclick = function () {
+                document.body.removeChild(overlay);
+            };
+
+            // Añadir el botón al overlay
+            overlay.appendChild(closeButton);
+
+            document.body.appendChild(overlay);
+            document.body.appendChild(overlay);
+        }
+        function movePlayer(direction) {
+            maze.movePlayer(direction);
+        }
+
+        function Maze(options) {
+            var options = Object.assign({
+                gridElement: document.getElementById('body'),
+                gridSize: new Point(20, 15),
+                startPosition: new Point(0, 0),
+                targetPosition: null,
+                blockSize: 50,
+                onSolved: function () { },
+            }, options || {});
+
+            this.gridElement = options.gridElement;
+            this.blockSize = options.blockSize;
+            this.onSolved = options.onSolved;
+            this.bounds = options.gridSize;
+            this.startPosition = options.startPosition
+            this.targetPosition = options.targetPosition || this.bounds.offset([-1, -1]);
+
+            this.sides = ['bottom', 'right', 'top', 'left'];
+            this.oppositeSides = ['top', 'left', 'bottom', 'right'];
+            this.delta = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+            this.keyCodeDirMap = { 37: 'left', 38: 'top', 39: 'right', 40: 'bottom' };
+
+            this.blocks = new Array(this.bounds.y);
+            for (var i = 0; i < this.bounds.y; i++) {
+                this.blocks[i] = new Array(this.bounds.x);
+            }
+
+            var self = this;
+            document.onkeydown = function (e) {
+                if (self.solving || self.solved) {
+                    return;
+                }
+                if (e.keyCode in self.keyCodeDirMap) {
+                    self.movePlayer(self.keyCodeDirMap[e.keyCode]);
+                    e.preventDefault();
+                }
+            };
+        }
+
+        Maze.prototype.createBlock = function (p) {
+            var block = document.createElement('div');
+            block.classList.add('block');
+            block.style.left = (p.x * this.blockSize) + 'px';
+            block.style.top = (p.y * this.blockSize) + 'px';
+            block.open = { left: false, top: false, bottom: false, right: false };
+            return block;
+        }
+
+        Maze.prototype.getBlock = function (point) {
+            return this.blocks[point.y][point.x];
+        }
+
+        Maze.prototype.getPlayerBlock = function () {
+            return this.getBlock(this.position);
+        }
+
+        Maze.prototype.reset = function () {
+            if (this.solving || this.reseting) {
+                return false;
+            }
+
+            this.reseting = true;
+            this.position = this.startPosition;
+            this.solving = false;
+            this.solved = false;
+
+            while (this.gridElement.firstChild) {
+                this.gridElement.removeChild(this.gridElement.firstChild);
+            }
+
+            var fragment = document.createDocumentFragment();
+            for (var x = 0; x < this.bounds.x; x++) {
+                for (var y = 0; y < this.bounds.y; y++) {
+                    var block = this.createBlock(new Point(x, y), 25);
+                    this.blocks[y][x] = block;
+                    fragment.appendChild(block);
+                }
+            }
+            this.gridElement.appendChild(fragment);
+
+            this.getBlock(this.targetPosition).classList.add('target');
+
+            var self = this;
+            return this.generate().then(function () {
+                self.setPlayerPosition(self.startPosition);
+                self.reseting = false;
+            })
+        }
+
+        Maze.prototype.getAdjacents = function (point, visitedSet) {
+            var adjacents = [];
+            for (var i = 0; i < this.delta.length; i++) {
+                var cp = point.offset(this.delta[i]);
+                cp.side = this.sides[i];
+                cp.oppositeSide = this.oppositeSides[i];
+                if (cp.insideBounds(this.bounds) && !visitedSet.has(cp.serialize())) {
+                    adjacents.push(cp);
+                }
+            }
+            return adjacents;
+        }
+
+        Maze.prototype.movePlayer = function (direction) {
+            var currentBlock = this.getPlayerBlock();
+            var delta = this.delta[this.sides.indexOf(direction)];
+            var nextPosition = this.position.offset(delta);
+
+            if (!nextPosition.insideBounds(this.bounds)) {
+                addEphemeralClass(currentBlock, 'error', 100);
+                return;
+            }
+
+            if (!currentBlock.open[direction]) {
+                addEphemeralClass(currentBlock, 'error', 100);
+                return;
+            }
+
+            this.setPlayerPosition(nextPosition);
+        }
+
+        Maze.prototype.setPlayerPosition = function (position) {
+            this.getPlayerBlock().classList.remove('current');
+            this.position = position;
+            this.getPlayerBlock().classList.add('current');
+            if (!this.solved && this.position.equals(this.targetPosition)) {
+                this.solved = true;
+                if (!this.solving) {
+                    this.onSolved();
+                }
+            }
+        }
+
+        Maze.prototype.generate = function () {
+            var blockCount = this.bounds.x * this.bounds.y;
+            var stack = [];
+            var visited = new Set();
+            var start = this.startPosition;
+            stack.push(start);
+
+            var i = 0;
+            return whileAsync(() => visited.size < blockCount, () => {
+                var point = stack[stack.length - 1];
+                var ps = point.serialize();
+
+                var block = this.getBlock(point);
+
+                if (!visited.has(ps)) {
+                    visited.add(ps);
+                    block.dataset.index = i;
+                    block.classList.add('generated');
+                    i++;
+                }
+
+                var adjacents = this.getAdjacents(point, visited);
+
+                if (adjacents.length == 0) {
+                    stack.pop();
+                    return;
+                }
+
+                var rand = parseInt(Math.random() * 1000);
+                var np = adjacents[rand % adjacents.length]
+                var ajdBlock = this.getBlock(np);
+                stack.push(np);
+
+                // Remove the wall on the current block.
+                block.classList.add(np.side);
+                block.open[np.side] = true;
+
+                // And the opposite side for the adjacent block's perspective.
+                ajdBlock.classList.add(np.oppositeSide);
+                ajdBlock.open[np.oppositeSide] = true;
+            }, 100);
+        }
+
+    </script>
+</body>
+
+</html>
